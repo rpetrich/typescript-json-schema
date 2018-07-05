@@ -272,6 +272,7 @@ const validationKeywords = {
 
 export class JsonSchemaGenerator {
     private tc: ts.TypeChecker;
+    private args: Args;
 
     /**
      * Holds all symbols within a custom SymbolRef object, containing useful
@@ -318,14 +319,15 @@ export class JsonSchemaGenerator {
       userSymbols: { [name: string]: ts.Symbol },
       inheritingTypes: { [baseName: string]: string[] },
       tc: ts.TypeChecker,
-      private args = getDefaultArgs(),
+      args: PartialArgs = {}
     ) {
+        this.args = Object.assign(getDefaultArgs(), args);
         this.symbols = symbols;
         this.allSymbols = allSymbols;
         this.userSymbols = userSymbols;
         this.inheritingTypes = inheritingTypes;
         this.tc = tc;
-        this.userValidationKeywords = args.validationKeywords.reduce(
+        this.userValidationKeywords = this.args.validationKeywords.reduce(
           (acc, word) => ({ ...acc, [word]: true }),
           {}
         );
@@ -1026,14 +1028,6 @@ export function buildGenerator(program: ts.Program, args: PartialArgs = {}, only
         }
         return onlyIncludeFiles.indexOf(file.fileName) >= 0;
     }
-    // Use defaults unles otherwise specified
-    const settings = getDefaultArgs();
-
-    for (const pref in args) {
-        if (args.hasOwnProperty(pref)) {
-            settings[pref] = args[pref];
-        }
-    }
 
     let diagnostics: Array<ts.Diagnostic> = [];
 
@@ -1088,7 +1082,7 @@ export function buildGenerator(program: ts.Program, args: PartialArgs = {}, only
             inspect(sourceFile, typeChecker);
         });
 
-        return new JsonSchemaGenerator(symbols, allSymbols, userSymbols, inheritingTypes, typeChecker, settings);
+        return new JsonSchemaGenerator(symbols, allSymbols, userSymbols, inheritingTypes, typeChecker, args);
     } else {
         diagnostics.forEach((diagnostic) => {
             const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n");
