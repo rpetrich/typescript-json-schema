@@ -1,9 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var typescript_json_schema_1 = require("./typescript-json-schema");
+const typescript_json_schema_1 = require("./typescript-json-schema");
 function run() {
     var helpText = "Usage: typescript-json-schema <path-to-typescript-files-or-tsconfig> <type>";
-    var defaultArgs = typescript_json_schema_1.getDefaultArgs();
+    const defaultArgs = typescript_json_schema_1.getDefaultArgs();
     var args = require("yargs")
         .usage(helpText)
         .demand(2)
