@@ -27,6 +27,7 @@ function getDefaultArgs() {
         excludePrivate: false,
         uniqueNames: false,
         rejectDateType: false,
+        id: ""
     };
 }
 exports.getDefaultArgs = getDefaultArgs;
@@ -652,7 +653,7 @@ class JsonSchemaGenerator {
         }
         if (asRef) {
             returnedDefinition = {
-                $ref: "#/definitions/" + fullTypeName
+                $ref: `${this.args.id}#/definitions/` + fullTypeName
             };
         }
         const otherAnnotations = {};
@@ -736,14 +737,22 @@ class JsonSchemaGenerator {
         if (this.args.ref && includeReffedDefinitions && Object.keys(this.reffedDefinitions).length > 0) {
             def.definitions = this.reffedDefinitions;
         }
-        def["$schema"] = "http://json-schema.org/draft-06/schema#";
+        def["$schema"] = "http://json-schema.org/draft-07/schema#";
+        const id = this.args.id;
+        if (id) {
+            def["$id"] = this.args.id;
+        }
         return def;
     }
     getSchemaForSymbols(symbolNames, includeReffedDefinitions = true) {
         const root = {
-            $schema: "http://json-schema.org/draft-06/schema#",
+            $schema: "http://json-schema.org/draft-07/schema#",
             definitions: {}
         };
+        const id = this.args.id;
+        if (id) {
+            root["$id"] = id;
+        }
         for (const symbolName of symbolNames) {
             root.definitions[symbolName] = this.getTypeDefinition(this.allSymbols[symbolName], this.args.topRef, undefined, undefined, undefined, this.userSymbols[symbolName]);
         }
