@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const glob = require("glob");
 const stringify = require("json-stable-stringify");
 const path = require("path");
+const crypto_1 = require("crypto");
 const ts = require("typescript");
 const vm = require("vm");
 const REGEX_FILE_NAME_OR_SPACE = /(\bimport\(".*?"\)|".*?")\.| /g;
@@ -274,7 +275,11 @@ class JsonSchemaGenerator {
         if (decl && decl.length) {
             const type = decl[0].type;
             if (type && (type.kind & ts.SyntaxKind.TypeReference) && type.typeName) {
-                return this.tc.getSymbolAtLocation(type.typeName);
+                const symbol = this.tc.getSymbolAtLocation(type.typeName);
+                if (symbol && (symbol.flags & ts.SymbolFlags.Alias)) {
+                    return this.tc.getAliasedSymbol(symbol);
+                }
+                return symbol;
             }
         }
         return undefined;
@@ -808,6 +813,9 @@ function getProgramFromFiles(files, jsonCompilerOptions = {}, basePath = "./") {
     return ts.createProgram(files, options);
 }
 exports.getProgramFromFiles = getProgramFromFiles;
+function generateHashOfNode(node, relativePath) {
+    return crypto_1.createHash("md5").update(relativePath).update(node.pos.toString()).digest("hex").substring(0, 8);
+}
 function buildGenerator(program, args = {}, onlyIncludeFiles) {
     function isUserFile(file) {
         if (onlyIncludeFiles === undefined) {
@@ -825,7 +833,9 @@ function buildGenerator(program, args = {}, onlyIncludeFiles) {
         const allSymbols = {};
         const userSymbols = {};
         const inheritingTypes = {};
+        const workingDir = program.getCurrentDirectory();
         program.getSourceFiles().forEach((sourceFile, _sourceFileIdx) => {
+            const relativePath = path.relative(workingDir, sourceFile.fileName);
             function inspect(node, tc) {
                 if (node.kind === ts.SyntaxKind.ClassDeclaration
                     || node.kind === ts.SyntaxKind.InterfaceDeclaration
@@ -835,7 +845,7 @@ function buildGenerator(program, args = {}, onlyIncludeFiles) {
                     const nodeType = tc.getTypeAtLocation(node);
                     const fullyQualifiedName = tc.getFullyQualifiedName(symbol);
                     const typeName = fullyQualifiedName.replace(/".*"\./, "");
-                    const name = !args.uniqueNames ? typeName : `${typeName}.${symbol.id}`;
+                    const name = !args.uniqueNames ? typeName : `${typeName}.${generateHashOfNode(node, relativePath)}`;
                     symbols.push({ name, typeName, fullyQualifiedName, symbol });
                     if (!userSymbols[name]) {
                         allSymbols[name] = nodeType;
